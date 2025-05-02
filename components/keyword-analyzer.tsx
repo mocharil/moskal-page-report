@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
 import { ReportSuccessNotification } from "@/components/report-success-notification"
-import { NotificationError } from "@/components/notification"
+import { Notification } from "@/components/notification"
 import { config } from "@/lib/config"
 
 // Rest of the file remains unchanged
@@ -194,7 +194,7 @@ export default function KeywordAnalyzer() {
                       <Button
                         id="date-range"
                         variant="outline"
-                  className="w-full justify-start text-left font-normal bg-white border-[#0047AB] border-opacity-20 hover:border-opacity-30 transition-all duration-200"
+                        className="w-full justify-start text-left font-normal bg-white border-[#0047AB] border-opacity-20 hover:border-opacity-30 transition-all duration-200"
                       >
                         <Calendar className="mr-2 h-4 w-4 text-blue-500" />
                         {date?.from ? (
@@ -225,22 +225,24 @@ export default function KeywordAnalyzer() {
               </div>
 
               {/* Main Keyword Input */}
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500">
-                  <Search className="h-5 w-5" />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center bg-white border border-[#0047AB] border-opacity-20 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#0047AB] focus-within:ring-opacity-20">
+                  <div className="pl-4 text-blue-500">
+                    <Search className="h-5 w-5" />
+                  </div>
+                  <Input
+                    id="mainKeyword"
+                    value={mainKeyword}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMainKeyword(e.target.value)}
+                    placeholder="e.g., politics, economy, social issues"
+                    className="border-0 h-14 focus:ring-0 rounded-none bg-transparent pl-2"
+                    disabled={isLoading}
+                  />
                 </div>
-                <Input
-                  id="mainKeyword"
-                  value={mainKeyword}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMainKeyword(e.target.value)}
-                  placeholder="e.g., politics, economy, social issues"
-                  className="pl-12 h-14 bg-white border-[#0047AB] border-opacity-20 focus:border-[#0047AB] focus:ring-[#0047AB] focus:ring-opacity-20 rounded-xl transition-all duration-200"
-                  disabled={isLoading}
-                />
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="absolute right-0 top-0 h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-l-none rounded-r-xl transition-all duration-300"
+                  className="h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl transition-all duration-300"
                 >
                   {isLoading ? (
                     <>
@@ -402,7 +404,8 @@ export default function KeywordAnalyzer() {
 
       {/* Error Notification */}
       {showErrorNotification && (
-        <NotificationError
+        <Notification
+          type="error"
           title="Analysis Failed"
           message="We couldn't analyze your keywords. Please try again."
           onClose={() => setShowErrorNotification(false)}

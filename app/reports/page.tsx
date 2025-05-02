@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { config } from "@/lib/config"
-import { Loader2, Download, RefreshCw, Search } from "lucide-react"
+import { Loader2, Download, RefreshCw, RotateCw, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Notification } from "@/components/notification"
 import {
   Pagination,
   PaginationContent,
@@ -42,10 +43,16 @@ interface ReportsResponse {
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
+  const [regeneratingIds, setRegeneratingIds] = useState<string[]>([])
   const [error, setError] = useState("")
   const [email, setEmail] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null)
   const reportsPerPage = 5
 
   useEffect(() => {
@@ -114,24 +121,87 @@ export default function ReportsPage() {
     }
   }
 
+  const regenerateReport = async (jobId: string) => {
+    if (!jobId || !email) return
+    
+    setNotification(null)
+    setRegeneratingIds(prev => [...prev, jobId])
+    
+    try {
+      console.log('Starting report regeneration for job:', jobId)
+      
+      const params = new URLSearchParams({
+        job_id: jobId,
+        email: email
+      });
+      
+      const response = await fetch(`${config.apiBaseUrl}/regenerate-report?${params}`, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json'
+        }
+      })
+
+      console.log('Regenerate API response status:', response.status)
+      const data = await response.json()
+      console.log('Regenerate API response data:', data)
+
+      if (!response.ok) {
+        throw new Error(`Failed to regenerate report: ${response.status} - ${data.message || 'Unknown error'}`)
+      }
+
+      // Validate response data
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid API response format')
+      }
+      
+      setNotification({
+        type: 'success',
+        title: 'Report Regeneration Started',
+        message: 'Your report is being regenerated. You will be notified when it is ready.'
+      })
+      
+      // Refresh reports list after regeneration
+      console.log('Refreshing reports list...')
+      await fetchReports(email)
+    } catch (err) {
+      console.error('Report regeneration failed:', err)
+      setNotification({
+        type: 'error',
+        title: 'Regeneration Failed',
+        message: err instanceof Error ? err.message : 'Failed to regenerate report'
+      })
+    } finally {
+      setRegeneratingIds(prev => prev.filter(id => id !== jobId))
+    }
+  }
+
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "completed":
         return "bg-green-100 text-green-800"
       case "processing":
         return "bg-blue-100 text-blue-800"
+      case "failed":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
   // Filter reports based on search term (topic and keywords)
-  const filteredReports = reports.filter(report =>
-    report.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    report.keywords.some(keyword => 
-      keyword.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  )
+  const filteredReports = reports.filter(report => {
+    const search = searchTerm.toLowerCase().trim();
+    if (!search) return true;
+    
+    // Search in topic
+    if (report.topic.toLowerCase().includes(search)) return true;
+    
+    // Search in keywords
+    return report.keywords.some(keyword => 
+      keyword.toLowerCase().includes(search)
+    );
+  })
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredReports.length / reportsPerPage)
@@ -151,13 +221,15 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
-      <Card className="border-0 shadow-xl bg-white rounded-2xl overflow-hidden">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden transform transition-all duration-300 hover:shadow-xl">
         <CardContent className="p-8">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-[#0047AB]">Your Reports</h1>
-              <p className="text-sm text-gray-600 mt-1">Track the status of your report generation requests</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                Your Reports
+              </h1>
+              <p className="text-sm text-gray-600 mt-2">Track the status of your report generation requests</p>
             </div>
             <Button
               onClick={refreshReports}
@@ -170,18 +242,20 @@ export default function ReportsPage() {
             </Button>
           </div>
 
-          {/* Search input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          {/* Modern Search input */}
+          <div className="relative group z-10">
+            <div className="pointer-events-none absolute inset-0 bg-blue-100 opacity-0 group-hover:opacity-10 rounded-lg transition-all duration-300"></div>
+            <Search className="pointer-events-none absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-500" />
             <Input
               type="text"
               placeholder="Search reports by topic or keywords..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value)
-                setCurrentPage(1) // Reset to first page when searching
+                setCurrentPage(1)
               }}
-              className="pl-10"
+              className="pl-12 h-12 w-full text-base border-2 border-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg 
+                transition-all duration-300 hover:border-blue-200 cursor-text"
             />
           </div>
         </CardContent>
@@ -211,9 +285,14 @@ export default function ReportsPage() {
         <>
           <div className="space-y-4">
             {paginatedReports.map((report, index) => (
-              <Card key={`${report.job_id}-${index}`} className="overflow-hidden border border-[#0047AB] border-opacity-10 hover:border-opacity-20 transition-all duration-200">
-                <CardContent className="p-6 relative">
-                  <div className="absolute top-0 right-0 bg-[#0047AB] bg-opacity-5 w-32 h-32 rounded-full -mr-16 -mt-16 z-0" />
+              <Card 
+                key={`${report.job_id}-${index}`} 
+                className="overflow-hidden border-2 border-gray-100 hover:border-blue-200 transition-all duration-300 
+                  transform hover:-translate-y-1 hover:shadow-lg rounded-xl"
+              >
+                <CardContent className="p-8 relative">
+                  <div className="absolute top-0 right-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 
+                    w-48 h-48 rounded-full -mr-24 -mt-24 z-0 transition-all duration-500 group-hover:scale-110" />
                   <div className="flex justify-between items-start relative z-10">
                     <div>
                       <h3 className="text-lg font-semibold text-[#0047AB] capitalize">{report.topic}</h3>
@@ -227,7 +306,8 @@ export default function ReportsPage() {
                         {report.keywords.map((keyword, idx) => (
                           <Badge 
                             key={idx} 
-                            className="bg-[#0047AB] bg-opacity-10 text-[#0047AB] hover:bg-opacity-20"
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-300
+                              px-3 py-1 rounded-full text-sm"
                           >
                             {keyword}
                           </Badge>
@@ -246,18 +326,35 @@ export default function ReportsPage() {
                     </Badge>
                   </div>
                   
-                  {report.status === "completed" && report.url && (
-                    <div className="mt-4">
+                  <div className="mt-4 flex gap-2">
+                    {report.status === "completed" && report.url && (
                       <Button
                         variant="outline"
-                        className="flex items-center gap-2 border-[#0047AB] border-opacity-20 text-[#0047AB] hover:bg-[#0047AB] hover:bg-opacity-5"
+                        className="flex items-center gap-2 border-2 border-blue-100 text-blue-600 
+                          hover:bg-blue-50 hover:border-blue-200 transition-all duration-300 rounded-lg px-6"
                         onClick={() => window.open(report.url, "_blank")}
                       >
                         <Download className="h-4 w-4" />
                         Download Report
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    {report.status === "failed" && report.job_id && (
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2 border-2 border-red-100 text-red-600 
+                          hover:bg-red-50 hover:border-red-200 transition-all duration-300 rounded-lg px-6"
+                        onClick={() => regenerateReport(report.job_id!)}
+                        disabled={regeneratingIds.includes(report.job_id)}
+                      >
+                        {regeneratingIds.includes(report.job_id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RotateCw className="h-4 w-4" />
+                        )}
+                        Regenerate Report
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -292,6 +389,16 @@ export default function ReportsPage() {
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
+          )}
+
+          {/* Notification */}
+          {notification && (
+            <Notification
+              type={notification.type}
+              title={notification.title}
+              message={notification.message}
+              onClose={() => setNotification(null)}
+            />
           )}
         </>
       )}

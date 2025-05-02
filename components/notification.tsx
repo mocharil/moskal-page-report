@@ -1,155 +1,50 @@
-"use client"
+import { CheckCircle2, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "./ui/alert"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { CheckCircle, X, Mail, AlertCircle } from "lucide-react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-
-const notificationVariants = cva(
-  "fixed z-50 flex items-center gap-3 p-4 rounded-lg shadow-lg border transition-all duration-500 transform",
-  {
-    variants: {
-      variant: {
-        success: "bg-gradient-to-r from-green-50 to-blue-50 border-green-200 text-green-800",
-        error: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200 text-red-800",
-        info: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-800",
-      },
-      position: {
-        topRight: "top-4 right-4",
-        topCenter: "top-4 left-1/2 -translate-x-1/2",
-        bottomRight: "bottom-4 right-4",
-        bottomCenter: "bottom-4 left-1/2 -translate-x-1/2",
-      },
-    },
-    defaultVariants: {
-      variant: "success",
-      position: "topRight",
-    },
-  },
-)
-
-export interface NotificationProps extends VariantProps<typeof notificationVariants> {
+interface NotificationProps {
+  type: 'success' | 'error'
   title: string
   message: string
-  icon?: React.ReactNode
-  duration?: number
-  onClose?: () => void
+  onClose: () => void
 }
 
 export function Notification({
+  type,
   title,
   message,
-  icon,
-  variant = "success",
-  position = "topRight",
-  duration = 5000,
-  onClose,
+  onClose
 }: NotificationProps) {
-  const [isVisible, setIsVisible] = useState(true)
-  const [isExiting, setIsExiting] = useState(false)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleClose()
-    }, duration)
-
-    return () => clearTimeout(timer)
-  }, [duration])
-
-  const handleClose = () => {
-    setIsExiting(true)
-    setTimeout(() => {
-      setIsVisible(false)
-      if (onClose) onClose()
-    }, 500)
-  }
-
-  if (!isVisible) return null
-
+  const isSuccess = type === 'success'
+  
   return (
-    <div
-      className={cn(
-        notificationVariants({ variant, position }),
-        isExiting ? "opacity-0 translate-y-[-10px]" : "opacity-100 translate-y-0",
-      )}
+    <Alert
+      className={`fixed bottom-4 right-4 w-96 ${
+        isSuccess 
+          ? 'bg-[#0047AB] bg-opacity-5 border-[#0047AB] text-[#0047AB]' 
+          : 'bg-red-500 bg-opacity-5 border-red-500 text-red-500'
+      } border border-opacity-20 shadow-lg animate-in slide-in-from-right rounded-xl`}
+      onMouseEnter={(e) => {
+        const target = e.currentTarget
+        setTimeout(() => {
+          if (target.matches(':hover')) {
+            onClose()
+          }
+        }, 5000)
+      }}
     >
-      <div className="flex-shrink-0">
-        {icon ||
-          (variant === "success" ? (
-            <div className="rounded-full bg-green-100 p-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-          ) : variant === "error" ? (
-            <div className="rounded-full bg-red-100 p-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-            </div>
-          ) : (
-            <div className="rounded-full bg-blue-100 p-2">
-              <Mail className="h-5 w-5 text-blue-600" />
-            </div>
-          ))}
-      </div>
-      <div className="flex-1">
-        <h4 className="font-medium text-sm">{title}</h4>
-        <p className="text-xs opacity-90">{message}</p>
-      </div>
-      <button
-        onClick={handleClose}
-        className="flex-shrink-0 rounded-full p-1 hover:bg-black/5 transition-colors"
-        aria-label="Close notification"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
-
-export function NotificationSuccess({
-  title = "Success!",
-  message,
-  position = "topRight",
-  duration,
-  onClose,
-}: Omit<NotificationProps, "variant" | "icon"> & { title?: string }) {
-  return (
-    <Notification
-      title={title}
-      message={message}
-      variant="success"
-      position={position}
-      duration={duration}
-      onClose={onClose}
-      icon={
-        <div className="rounded-full bg-green-100 p-2">
-          <CheckCircle className="h-5 w-5 text-green-600" />
+      <div className="flex items-start gap-3">
+        {isSuccess ? (
+          <CheckCircle2 className={`h-5 w-5 ${isSuccess ? 'text-[#0047AB]' : 'text-red-500'} mt-0.5`} />
+        ) : (
+          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+        )}
+        <div className="space-y-1">
+          <h3 className="font-medium">{title}</h3>
+          <AlertDescription className="text-opacity-80">
+            {message}
+          </AlertDescription>
         </div>
-      }
-    />
-  )
-}
-
-export function NotificationError({
-  title = "Error",
-  message,
-  position = "topRight",
-  duration,
-  onClose,
-}: Omit<NotificationProps, "variant" | "icon"> & { title?: string }) {
-  return (
-    <Notification
-      title={title}
-      message={message}
-      variant="error"
-      position={position}
-      duration={duration}
-      onClose={onClose}
-      icon={
-        <div className="rounded-full bg-red-100 p-2">
-          <AlertCircle className="h-5 w-5 text-red-600" />
-        </div>
-      }
-    />
+      </div>
+    </Alert>
   )
 }

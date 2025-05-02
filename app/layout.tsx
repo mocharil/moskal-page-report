@@ -16,14 +16,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <main>{children}</main>
-          </div>
-        </ThemeProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Navigation />
+          <main>{children}</main>
+        </div>
       </body>
     </html>
   )
