@@ -43,7 +43,12 @@ export default function KeywordAnalyzer() {
   const [mainKeyword, setMainKeyword] = useState("")
   const [relevantKeywords, setRelevantKeywords] = useState<string[]>([])
   const [newKeyword, setNewKeyword] = useState("")
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("reportEmail") || ""
+    }
+    return ""
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [error, setError] = useState("")
@@ -116,6 +121,11 @@ export default function KeywordAnalyzer() {
       return
     }
 
+    if (!email) {
+      setError("Please enter an email address to receive the report")
+      return
+    }
+
     setError("")
     setEmailError("")
     setIsGeneratingReport(true)
@@ -126,7 +136,7 @@ export default function KeywordAnalyzer() {
         start_date: format(date.from, 'yyyy-MM-dd'),
         end_date: format(date.to, 'yyyy-MM-dd'),
         sub_keyword: relevantKeywords.join(','),
-        ...(email && { email_receiver: email })
+        email_receiver: email
       });
 
       const response = await fetch(`${config.apiBaseUrl}/generate-report?${params}`, {
@@ -143,7 +153,8 @@ export default function KeywordAnalyzer() {
       const data = await response.json();
       
       if (data.status === 'success') {
-        setReportUrl(data.data.url);
+        // Save email to localStorage for the reports page
+        localStorage.setItem("reportEmail", email);
         setShowSuccessNotification(true);
       } else {
         throw new Error(data.message || 'Failed to generate report');
@@ -158,16 +169,18 @@ export default function KeywordAnalyzer() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto px-4 py-8">
-      <Card className="overflow-hidden border-0 shadow-xl bg-white rounded-2xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.01]">
-        <CardContent className="p-0">
-          <div className="p-8 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-            <h3 className="text-2xl font-bold mb-3 text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Main Keyword
-            </h3>
-            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              Enter a topic to analyze public sentiment and discover related keywords
-            </p>
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <Card className="overflow-hidden border-0 shadow-xl bg-white rounded-2xl">
+        <CardContent className="p-8">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-2xl font-bold mb-2 text-[#0047AB]">
+                Generate Report
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Enter a topic to analyze public sentiment and discover related keywords across social media conversations.
+              </p>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Date Range Picker */}
@@ -181,7 +194,7 @@ export default function KeywordAnalyzer() {
                       <Button
                         id="date-range"
                         variant="outline"
-                        className="w-full justify-start text-left font-normal bg-white border-blue-200 hover:bg-blue-50/50 hover:border-blue-300 transition-all duration-200"
+                  className="w-full justify-start text-left font-normal bg-white border-[#0047AB] border-opacity-20 hover:border-opacity-30 transition-all duration-200"
                       >
                         <Calendar className="mr-2 h-4 w-4 text-blue-500" />
                         {date?.from ? (
@@ -221,13 +234,13 @@ export default function KeywordAnalyzer() {
                   value={mainKeyword}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMainKeyword(e.target.value)}
                   placeholder="e.g., politics, economy, social issues"
-                  className="pl-12 h-14 bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-200 rounded-xl transition-all duration-200"
+                  className="pl-12 h-14 bg-white border-[#0047AB] border-opacity-20 focus:border-[#0047AB] focus:ring-[#0047AB] focus:ring-opacity-20 rounded-xl transition-all duration-200"
                   disabled={isLoading}
                 />
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="absolute right-0 top-0 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-l-none rounded-r-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200"
+                  className="absolute right-0 top-0 h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-l-none rounded-r-xl transition-all duration-300"
                 >
                   {isLoading ? (
                     <>
@@ -252,16 +265,18 @@ export default function KeywordAnalyzer() {
       )}
 
       {relevantKeywords.length > 0 && (
-        <Card className="border-0 shadow-xl bg-white rounded-2xl overflow-hidden">
+        <Card className="border border-[#0047AB] border-opacity-10 shadow-lg bg-white rounded-2xl overflow-hidden mt-8">
           <CardContent className="p-8">
+            <div className="absolute top-0 right-0 bg-[#0047AB] bg-opacity-5 w-32 h-32 rounded-full -mr-16 -mt-16" />
+            <div className="absolute bottom-0 left-0 bg-[#0047AB] bg-opacity-5 w-24 h-24 rounded-full -ml-12 -mb-12" />
             <div className="space-y-8">
               <div>
                 <div className="flex items-center mb-6">
-                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                    <TrendingUp className="text-blue-600 h-5 w-5" />
+                  <div className="p-2 bg-[#0047AB] bg-opacity-10 rounded-lg mr-3">
+                    <TrendingUp className="text-[#0047AB] h-5 w-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800">Relevant Keywords</h3>
-                  <Badge className="ml-3 bg-blue-100 text-blue-600 hover:bg-blue-200">{relevantKeywords.length}</Badge>
+                  <h3 className="text-xl font-bold text-[#0047AB]">Relevant Keywords</h3>
+                  <Badge className="ml-3 bg-[#0047AB] bg-opacity-10 text-[#0047AB]">{relevantKeywords.length}</Badge>
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-8">
@@ -269,7 +284,7 @@ export default function KeywordAnalyzer() {
                     <Badge
                       key={index}
                       variant="secondary"
-                      className="py-2 px-4 text-sm flex items-center gap-2 bg-white border-2 border-blue-100 text-gray-700 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 rounded-lg"
+                      className="py-2 px-4 text-sm flex items-center gap-2 bg-white border border-[#0047AB] border-opacity-20 text-gray-700 hover:bg-[#0047AB] hover:bg-opacity-5 transition-all duration-200 rounded-lg"
                     >
                       {keyword}
                       <button
@@ -299,7 +314,7 @@ export default function KeywordAnalyzer() {
                   <Button
                     onClick={addKeyword}
                     variant="outline"
-                    className="h-12 border-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 flex items-center gap-2 transition-all duration-200 rounded-xl"
+                    className="h-12 border border-[#0047AB] border-opacity-20 text-[#0047AB] hover:bg-[#0047AB] hover:bg-opacity-5 flex items-center gap-2 transition-all duration-200 rounded-xl"
                   >
                     <Plus className="h-4 w-4" />
                     Add
@@ -334,7 +349,7 @@ export default function KeywordAnalyzer() {
                 <Button
                   onClick={generateReport}
                   disabled={isGeneratingReport}
-                  className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl text-lg font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-blue-200"
+                  className="w-full h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl text-lg font-semibold transition-all duration-300"
                 >
                   {isGeneratingReport ? (
                     <>
@@ -377,10 +392,10 @@ export default function KeywordAnalyzer() {
         <ReportSuccessNotification
           email={email}
           keywords={relevantKeywords}
-          reportUrl={reportUrl}
+          message="Your report generation has started. You can check the status in the Reports page."
           onClose={() => {
             setShowSuccessNotification(false);
-            setReportUrl("");
+            window.location.href = "/reports";
           }}
         />
       )}
