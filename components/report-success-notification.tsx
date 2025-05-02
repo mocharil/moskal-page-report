@@ -5,8 +5,9 @@ import { X, ChevronRight, Mail, FileText, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ReportSuccessNotificationProps {
-  email: string
+  email?: string
   keywords: string[]
+  reportUrl?: string
   onClose: () => void
   duration?: number
 }
@@ -14,6 +15,7 @@ interface ReportSuccessNotificationProps {
 export function ReportSuccessNotification({
   email,
   keywords,
+  reportUrl,
   onClose,
   duration = 8000,
 }: ReportSuccessNotificationProps) {
@@ -86,16 +88,18 @@ export function ReportSuccessNotification({
 
       {/* Content */}
       <div className="p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="bg-blue-50 rounded-full p-2 flex-shrink-0">
-            <Mail className="h-5 w-5 text-[#0047AB]" />
+        {email && (
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-blue-50 rounded-full p-2 flex-shrink-0">
+              <Mail className="h-5 w-5 text-[#0047AB]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-600">
+                Report sent to <span className="font-medium text-gray-800">{email}</span>
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-gray-600">
-              Report sent to <span className="font-medium text-gray-800">{email}</span>
-            </p>
-          </div>
-        </div>
+        )}
 
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-blue-50 rounded-full p-2 flex-shrink-0">
@@ -131,10 +135,17 @@ export function ReportSuccessNotification({
         </div>
 
         {/* Action button */}
-        <button className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 transition-colors rounded-md text-sm font-medium text-gray-700 flex items-center justify-center gap-1">
-          View Details
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        {reportUrl && (
+          <a 
+            href={reportUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 transition-colors rounded-md text-sm font-medium text-gray-700 flex items-center justify-center gap-1"
+          >
+            View Report
+            <ChevronRight className="h-4 w-4" />
+          </a>
+        )}
       </div>
     </div>
   )

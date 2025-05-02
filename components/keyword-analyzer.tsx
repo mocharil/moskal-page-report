@@ -1,9 +1,12 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { Loader2, Plus, X, Search, TrendingUp, AlertCircle, Mail } from "lucide-react"
+import { Loader2, Plus, X, Search, TrendingUp, AlertCircle, Mail, Calendar } from "lucide-react"
+import { format, subDays } from "date-fns"
+import { DateRange } from "react-day-picker"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,34 +15,28 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
 import { ReportSuccessNotification } from "@/components/report-success-notification"
 import { NotificationError } from "@/components/notification"
+import { config } from "@/lib/config"
 
-// Mock function to simulate API call for relevant keywords
+// Rest of the file remains unchanged
 const fetchRelevantKeywords = async (keyword: string): Promise<string[]> => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/generate-sub-keywords?topic=${encodeURIComponent(keyword)}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json'
+      }
+    });
 
-  // Mock relevant keywords based on input
-  const mockKeywords: Record<string, string[]> = {
-    "social media": ["instagram", "facebook", "twitter", "tiktok", "linkedin", "engagement", "followers"],
-    "digital marketing": ["seo", "content marketing", "email marketing", "ppc", "social media marketing"],
-    ecommerce: ["online store", "shopify", "woocommerce", "product listings", "payment gateway"],
-    seo: ["backlinks", "keywords", "google ranking", "meta tags", "search engine"],
-    content: ["blog posts", "articles", "videos", "infographics", "podcasts"],
-    indonesia: ["jakarta", "bali", "surabaya", "bandung", "yogyakarta", "public opinion", "local news"],
-    politics: ["election", "policy", "government", "campaign", "public sentiment", "approval rating"],
-    economy: ["inflation", "market trends", "financial news", "economic policy", "business sentiment"],
+    if (!response.ok) {
+      throw new Error('Failed to fetch keywords');
+    }
+
+    const data = await response.json();
+    return data.sub_keyword || [];
+  } catch (error) {
+    console.error('Error fetching keywords:', error);
+    throw error;
   }
-
-  // Return mock keywords or generate some if not in our mock data
-  return (
-    mockKeywords[keyword.toLowerCase()] || [
-      `${keyword} trends`,
-      `${keyword} sentiment`,
-      `${keyword} analysis`,
-      `${keyword} public opinion`,
-      `${keyword} social impact`,
-    ]
-  )
 }
 
 export default function KeywordAnalyzer() {
@@ -53,8 +50,13 @@ export default function KeywordAnalyzer() {
   const [emailError, setEmailError] = useState("")
   const [showSuccessNotification, setShowSuccessNotification] = useState(false)
   const [showErrorNotification, setShowErrorNotification] = useState(false)
+  const [reportUrl, setReportUrl] = useState<string>("")
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!mainKeyword.trim()) {
@@ -104,13 +106,13 @@ export default function KeywordAnalyzer() {
       return
     }
 
-    if (!email) {
-      setEmailError("Please enter your email to receive the report")
+    if (!mainKeyword) {
+      setError("Please enter a main keyword")
       return
     }
 
-    if (!validateEmail(email)) {
-      setEmailError("Please enter a valid email address")
+    if (!date?.from || !date?.to) {
+      setError("Please select a date range")
       return
     }
 
@@ -118,85 +120,163 @@ export default function KeywordAnalyzer() {
     setEmailError("")
     setIsGeneratingReport(true)
 
-    // Simulate report generation
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    try {
+      const params = new URLSearchParams({
+        topic: mainKeyword,
+        start_date: format(date.from, 'yyyy-MM-dd'),
+        end_date: format(date.to, 'yyyy-MM-dd'),
+        sub_keyword: relevantKeywords.join(','),
+        ...(email && { email_receiver: email })
+      });
 
-    setIsGeneratingReport(false)
-    setShowSuccessNotification(true)
+      const response = await fetch(`${config.apiBaseUrl}/generate-report?${params}`, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        setReportUrl(data.data.url);
+        setShowSuccessNotification(true);
+      } else {
+        throw new Error(data.message || 'Failed to generate report');
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setError("Failed to generate report. Please try again.");
+      setShowErrorNotification(true);
+    } finally {
+      setIsGeneratingReport(false);
+    }
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="overflow-hidden border-blue-100 shadow-lg">
+    <div className="space-y-8 max-w-4xl mx-auto px-4 py-8">
+      <Card className="overflow-hidden border-0 shadow-xl bg-white rounded-2xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.01]">
         <CardContent className="p-0">
-          <div className="p-6 bg-gradient-to-r from-[#0047AB]/5 to-blue-50">
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">Main Keyword</h3>
-            <p className="text-sm text-gray-500 mb-4">
+          <div className="p-8 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+            <h3 className="text-2xl font-bold mb-3 text-gray-800 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Main Keyword
+            </h3>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
               Enter a topic to analyze public sentiment and discover related keywords
             </p>
 
-            <form onSubmit={handleSubmit} className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <Search className="h-5 w-5" />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Date Range Picker */}
+              <div>
+                <Label htmlFor="date-range" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Date Range
+                </Label>
+                <div className="grid gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="date-range"
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal bg-white border-blue-200 hover:bg-blue-50/50 hover:border-blue-300 transition-all duration-200"
+                      >
+                        <Calendar className="mr-2 h-4 w-4 text-blue-500" />
+                        {date?.from ? (
+                          date.to ? (
+                            <>
+                              {format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}
+                            </>
+                          ) : (
+                            format(date.from, "LLL dd, y")
+                          )
+                        ) : (
+                          <span>Pick a date range</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={2}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
-              <Input
-                id="mainKeyword"
-                value={mainKeyword}
-                onChange={(e) => setMainKeyword(e.target.value)}
-                placeholder="e.g., politics, economy, social issues"
-                className="pl-10 h-12 border-blue-100 focus:border-[#0047AB] focus:ring-[#0047AB]/20"
-                disabled={isLoading}
-              />
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="absolute right-0 top-0 h-12 bg-[#0047AB] hover:bg-[#003d91] rounded-l-none"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing
-                  </>
-                ) : (
-                  "Analyze"
-                )}
-              </Button>
+
+              {/* Main Keyword Input */}
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500">
+                  <Search className="h-5 w-5" />
+                </div>
+                <Input
+                  id="mainKeyword"
+                  value={mainKeyword}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMainKeyword(e.target.value)}
+                  placeholder="e.g., politics, economy, social issues"
+                  className="pl-12 h-14 bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-200 rounded-xl transition-all duration-200"
+                  disabled={isLoading}
+                />
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="absolute right-0 top-0 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-l-none rounded-r-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing
+                    </>
+                  ) : (
+                    "Analyze"
+                  )}
+                </Button>
+              </div>
             </form>
           </div>
         </CardContent>
       </Card>
 
       {error && (
-        <Alert variant="destructive" className="border-red-200 bg-red-50">
+        <Alert variant="destructive" className="border-red-200 bg-red-50/50 backdrop-blur-sm rounded-xl">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="ml-2">{error}</AlertDescription>
         </Alert>
       )}
 
       {relevantKeywords.length > 0 && (
-        <Card className="border-blue-100 shadow-lg overflow-hidden">
-          <CardContent className="p-6">
-            <div className="space-y-6">
+        <Card className="border-0 shadow-xl bg-white rounded-2xl overflow-hidden">
+          <CardContent className="p-8">
+            <div className="space-y-8">
               <div>
-                <div className="flex items-center mb-4">
-                  <TrendingUp className="text-[#0047AB] h-5 w-5 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-800">Relevant Keywords</h3>
-                  <Badge className="ml-2 bg-blue-100 text-[#0047AB] hover:bg-blue-200">{relevantKeywords.length}</Badge>
+                <div className="flex items-center mb-6">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                    <TrendingUp className="text-blue-600 h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800">Relevant Keywords</h3>
+                  <Badge className="ml-3 bg-blue-100 text-blue-600 hover:bg-blue-200">{relevantKeywords.length}</Badge>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-8">
                   {relevantKeywords.map((keyword, index) => (
                     <Badge
                       key={index}
                       variant="secondary"
-                      className="py-1.5 px-3 text-sm flex items-center gap-1 bg-white border border-blue-100 text-gray-700 hover:bg-blue-50"
+                      className="py-2 px-4 text-sm flex items-center gap-2 bg-white border-2 border-blue-100 text-gray-700 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 rounded-lg"
                     >
                       {keyword}
                       <button
                         onClick={() => removeKeyword(keyword)}
-                        className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
+                        className="text-gray-400 hover:text-red-500 transition-colors"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3.5 w-3.5" />
                         <span className="sr-only">Remove {keyword}</span>
                       </button>
                     </Badge>
@@ -204,22 +284,22 @@ export default function KeywordAnalyzer() {
                 </div>
               </div>
 
-              <div className="border-t border-blue-100 pt-6">
-                <label htmlFor="newKeyword" className="block text-sm font-medium mb-2 text-gray-700">
+              <div className="border-t border-blue-100 pt-8">
+                <label htmlFor="newKeyword" className="block text-sm font-semibold mb-3 text-gray-700">
                   Add Custom Keyword
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Input
                     id="newKeyword"
                     value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyword(e.target.value)}
                     placeholder="Enter a custom keyword"
-                    className="flex-1 border-blue-100 focus:border-[#0047AB] focus:ring-[#0047AB]/20"
+                    className="flex-1 bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-200 rounded-xl h-12"
                   />
                   <Button
                     onClick={addKeyword}
                     variant="outline"
-                    className="border-blue-200 text-[#0047AB] hover:bg-blue-50 hover:text-[#003d91] flex items-center gap-1"
+                    className="h-12 border-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 flex items-center gap-2 transition-all duration-200 rounded-xl"
                   >
                     <Plus className="h-4 w-4" />
                     Add
@@ -227,26 +307,26 @@ export default function KeywordAnalyzer() {
                 </div>
               </div>
 
-              <div className="border-t border-blue-100 pt-6">
-                <div className="mb-4">
-                  <Label htmlFor="email" className="block text-sm font-medium mb-2 text-gray-700">
+              <div className="border-t border-blue-100 pt-8">
+                <div className="mb-6">
+                  <Label htmlFor="email" className="block text-sm font-semibold mb-3 text-gray-700">
                     Email Address
                   </Label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500">
                       <Mail className="h-5 w-5" />
                     </div>
                     <Input
                       id="email"
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                       placeholder="Enter your email to receive the report"
-                      className="pl-10 border-blue-100 focus:border-[#0047AB] focus:ring-[#0047AB]/20"
+                      className="pl-12 bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-200 rounded-xl h-12"
                     />
                   </div>
-                  {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
-                  <p className="text-xs text-gray-500 mt-2">
+                  {emailError && <p className="text-red-500 text-sm mt-2">{emailError}</p>}
+                  <p className="text-sm text-gray-500 mt-3">
                     We'll send the sentiment analysis report to this email address.
                   </p>
                 </div>
@@ -254,7 +334,7 @@ export default function KeywordAnalyzer() {
                 <Button
                   onClick={generateReport}
                   disabled={isGeneratingReport}
-                  className="w-full h-12 bg-[#0047AB] hover:bg-[#003d91] mt-4 text-white font-medium"
+                  className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl text-lg font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-blue-200"
                 >
                   {isGeneratingReport ? (
                     <>
@@ -297,7 +377,11 @@ export default function KeywordAnalyzer() {
         <ReportSuccessNotification
           email={email}
           keywords={relevantKeywords}
-          onClose={() => setShowSuccessNotification(false)}
+          reportUrl={reportUrl}
+          onClose={() => {
+            setShowSuccessNotification(false);
+            setReportUrl("");
+          }}
         />
       )}
 
