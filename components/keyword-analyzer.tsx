@@ -169,8 +169,8 @@ export default function KeywordAnalyzer() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <Card className="overflow-hidden border-0 shadow-xl bg-white rounded-2xl">
+    <div className="content-wrapper max-w-4xl mx-auto px-4 py-12">
+      <Card className="card overflow-hidden border-0 rounded-2xl fade-in">
         <CardContent className="p-8">
           <div className="space-y-6">
             <div>
@@ -242,7 +242,7 @@ export default function KeywordAnalyzer() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl transition-all duration-300"
+                  className="h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl transition-all duration-300 button-animate"
                 >
                   {isLoading ? (
                     <>
@@ -267,7 +267,7 @@ export default function KeywordAnalyzer() {
       )}
 
       {relevantKeywords.length > 0 && (
-        <Card className="border border-[#0047AB] border-opacity-10 shadow-lg bg-white rounded-2xl overflow-hidden mt-8">
+        <Card className="card border border-[#0047AB] border-opacity-10 rounded-2xl overflow-hidden mt-8 fade-in">
           <CardContent className="p-8">
             <div className="absolute top-0 right-0 bg-[#0047AB] bg-opacity-5 w-32 h-32 rounded-full -mr-16 -mt-16" />
             <div className="absolute bottom-0 left-0 bg-[#0047AB] bg-opacity-5 w-24 h-24 rounded-full -ml-12 -mb-12" />
@@ -316,7 +316,7 @@ export default function KeywordAnalyzer() {
                   <Button
                     onClick={addKeyword}
                     variant="outline"
-                    className="h-12 border border-[#0047AB] border-opacity-20 text-[#0047AB] hover:bg-[#0047AB] hover:bg-opacity-5 flex items-center gap-2 transition-all duration-200 rounded-xl"
+                    className="h-12 border border-[#0047AB] border-opacity-20 text-[#0047AB] hover:bg-[#0047AB] hover:bg-opacity-5 flex items-center gap-2 transition-all duration-200 rounded-xl button-animate"
                   >
                     <Plus className="h-4 w-4" />
                     Add
@@ -351,7 +351,7 @@ export default function KeywordAnalyzer() {
                 <Button
                   onClick={generateReport}
                   disabled={isGeneratingReport}
-                  className="w-full h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl text-lg font-semibold transition-all duration-300"
+                  className="w-full h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl text-lg font-semibold transition-all duration-300 button-animate"
                 >
                   {isGeneratingReport ? (
                     <>

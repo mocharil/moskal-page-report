@@ -6,10 +6,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { config } from "@/lib/config"
-import { Loader2, Download, RefreshCw, RotateCw, Search } from "lucide-react"
+import { Loader2, Download, RefreshCw, RotateCw, Search, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Notification } from "@/components/notification"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Pagination,
   PaginationContent,
@@ -18,6 +24,39 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+
+interface Summary {
+  summary: {
+    scope_and_sentiment: {
+      title: string;
+      points: string[];
+    };
+    dominant_topics: {
+      title: string;
+      topics: Array<{
+        name: string;
+        reach: string;
+        sentiment: string;
+        key_points: string[];
+      }>;
+    };
+    peak_periods: {
+      title: string;
+      points: string[];
+    };
+    negative_sentiment: {
+      title: string;
+      mentions: Array<{
+        source: string;
+        description: string;
+      }>;
+    };
+    key_recommendations: {
+      title: string;
+      points: string[];
+    };
+  };
+}
 
 interface Report {
   topic: string
@@ -30,6 +69,7 @@ interface Report {
   filename?: string
   url?: string
   keywords: string[]
+  summary?: Summary
 }
 
 interface ReportsResponse {
@@ -48,6 +88,7 @@ export default function ReportsPage() {
   const [email, setEmail] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedSummary, setSelectedSummary] = useState<Summary | null>(null)
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
     title: string;
@@ -338,6 +379,17 @@ export default function ReportsPage() {
                         Download Report
                       </Button>
                     )}
+                    {report.status === "completed" && report.summary && (
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2 border-2 border-blue-100 text-blue-600 
+                          hover:bg-blue-50 hover:border-blue-200 transition-all duration-300 rounded-lg px-6"
+                        onClick={() => report.summary && setSelectedSummary(report.summary)}
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Summary
+                      </Button>
+                    )}
                     {report.status === "failed" && report.job_id && (
                       <Button
                         variant="outline"
@@ -359,6 +411,80 @@ export default function ReportsPage() {
               </Card>
             ))}
           </div>
+
+          {/* Summary Dialog */}
+          <Dialog open={!!selectedSummary} onOpenChange={() => setSelectedSummary(null)}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Report Summary</DialogTitle>
+              </DialogHeader>
+              {selectedSummary && (
+                <div className="space-y-6 py-4">
+                  {/* Scope and Sentiment */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{selectedSummary.summary.scope_and_sentiment.title}</h3>
+                    <ul className="list-disc pl-6 space-y-2">
+                      {selectedSummary.summary.scope_and_sentiment.points.map((point, idx) => (
+                        <li key={idx} className="text-gray-700">{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Dominant Topics */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{selectedSummary.summary.dominant_topics.title}</h3>
+                    <div className="space-y-4">
+                      {selectedSummary.summary.dominant_topics.topics.map((topic, idx) => (
+                        <div key={idx} className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-blue-600">{topic.name}</h4>
+                          <p className="text-sm text-gray-600 mt-1">Reach: {topic.reach}</p>
+                          <p className="text-sm text-gray-600">Sentiment: {topic.sentiment}</p>
+                          <ul className="list-disc pl-6 mt-2">
+                            {topic.key_points.map((point, pidx) => (
+                              <li key={pidx} className="text-gray-700">{point}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Peak Periods */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{selectedSummary.summary.peak_periods.title}</h3>
+                    <ul className="list-disc pl-6 space-y-2">
+                      {selectedSummary.summary.peak_periods.points.map((point, idx) => (
+                        <li key={idx} className="text-gray-700">{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Negative Sentiment */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{selectedSummary.summary.negative_sentiment.title}</h3>
+                    <div className="space-y-3">
+                      {selectedSummary.summary.negative_sentiment.mentions.map((mention, idx) => (
+                        <div key={idx} className="bg-red-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-red-600">{mention.source}</h4>
+                          <p className="text-gray-700 mt-1">{mention.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Key Recommendations */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{selectedSummary.summary.key_recommendations.title}</h3>
+                    <ul className="list-disc pl-6 space-y-2">
+                      {selectedSummary.summary.key_recommendations.points.map((point, idx) => (
+                        <li key={idx} className="text-gray-700">{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Pagination */}
           {totalPages > 1 && (

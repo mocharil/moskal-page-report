@@ -1,11 +1,26 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
+import { Button } from "./ui/button"
+import { LogOut } from "lucide-react"
+import Cookies from "js-cookie"
 
 export function Navigation() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    // Clear all auth cookies
+    Cookies.remove("access_token")
+    Cookies.remove("refresh_token")
+    Cookies.remove("user")
+    // Clear localStorage
+    localStorage.removeItem("reportEmail")
+    // Redirect to login
+    router.push("/login")
+  }
 
   // Don't show navigation on login page
   if (pathname === "/login") {
@@ -47,6 +62,16 @@ export function Navigation() {
                 My Reports
               </Link>
             </div>
+          </div>
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-[#0047AB]/80"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
       </div>
