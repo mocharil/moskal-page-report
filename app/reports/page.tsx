@@ -39,7 +39,7 @@ export default function ReportsPage() {
     if (hasProcessingReports && email) {
       const intervalId = setInterval(() => {
         loadReports(email)
-      }, 5000) // Poll every 5 seconds
+      }, 20000) // Poll every 5 seconds
 
       return () => clearInterval(intervalId)
     }

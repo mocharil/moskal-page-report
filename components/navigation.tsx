@@ -65,8 +65,8 @@ export function Navigation() {
           </div>
           <div className="flex items-center">
             <Button
-              variant="ghost"
-              className="text-white hover:bg-[#0047AB]/80"
+              variant="outline"
+              className="bg-white text-[#0047AB] hover:bg-[#0047AB] hover:text-white rounded-full px-6 border-2 border-white transition-colors"
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 mr-2" />

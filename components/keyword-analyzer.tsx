@@ -56,6 +56,8 @@ export default function KeywordAnalyzer() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false)
   const [showErrorNotification, setShowErrorNotification] = useState(false)
   const [reportUrl, setReportUrl] = useState<string>("")
+  const [hasGeneratedReport, setHasGeneratedReport] = useState(false)
+  const [generatedKeywords, setGeneratedKeywords] = useState<string[]>([])
   const [date, setDate] = useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
     to: new Date(),
@@ -83,8 +85,19 @@ export default function KeywordAnalyzer() {
     }
   }
 
+  // Helper function to check if keywords have changed
+  const haveKeywordsChanged = () => {
+    if (relevantKeywords.length !== generatedKeywords.length) return true;
+    return relevantKeywords.some(keyword => !generatedKeywords.includes(keyword));
+  }
+
   const removeKeyword = (keywordToRemove: string) => {
-    setRelevantKeywords(relevantKeywords.filter((keyword) => keyword !== keywordToRemove))
+    setRelevantKeywords(relevantKeywords.filter((keyword) => keyword !== keywordToRemove));
+    // Reset generated state if keywords have changed
+    if (hasGeneratedReport && haveKeywordsChanged()) {
+      setHasGeneratedReport(false);
+      setGeneratedKeywords([]);
+    }
   }
 
   const addKeyword = () => {
@@ -95,7 +108,12 @@ export default function KeywordAnalyzer() {
       return
     }
 
-    setRelevantKeywords([...relevantKeywords, newKeyword.trim()])
+    setRelevantKeywords([...relevantKeywords, newKeyword.trim()]);
+    // Reset generated state if keywords have changed
+    if (hasGeneratedReport) {
+      setHasGeneratedReport(false);
+      setGeneratedKeywords([]);
+    }
     setNewKeyword("")
     setError("")
   }
@@ -106,6 +124,11 @@ export default function KeywordAnalyzer() {
   }
 
   const generateReport = async () => {
+    if (hasGeneratedReport && !haveKeywordsChanged()) {
+      setError("Keywords haven't changed since last report generation. Make changes to generate a new report.")
+      return
+    }
+
     if (relevantKeywords.length === 0) {
       setError("Please add at least one keyword before generating a report")
       return
@@ -156,6 +179,9 @@ export default function KeywordAnalyzer() {
         // Save email to localStorage for the reports page
         localStorage.setItem("reportEmail", email);
         setShowSuccessNotification(true);
+        setHasGeneratedReport(true);
+        // Store current keywords state
+        setGeneratedKeywords([...relevantKeywords]);
       } else {
         throw new Error(data.message || 'Failed to generate report');
       }
@@ -350,8 +376,12 @@ export default function KeywordAnalyzer() {
 
                 <Button
                   onClick={generateReport}
-                  disabled={isGeneratingReport}
-                  className="w-full h-14 bg-[#0047AB] hover:bg-[#003d91] rounded-xl text-lg font-semibold transition-all duration-300 button-animate"
+                  disabled={isGeneratingReport || (hasGeneratedReport && !haveKeywordsChanged())}
+                  className={`w-full h-14 rounded-xl text-lg font-semibold transition-all duration-300 button-animate ${
+                    isGeneratingReport || (hasGeneratedReport && !haveKeywordsChanged())
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-[#0047AB] hover:bg-[#003d91]'
+                  }`}
                 >
                   {isGeneratingReport ? (
                     <>

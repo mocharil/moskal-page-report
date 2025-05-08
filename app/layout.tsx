@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "Moskal Report Generator",
   description: "Generate sentiment analysis reports for any topic",
+  icons: {
+    icon: '/moskal-logo.png',
+  },
 }
 
 export default function RootLayout({

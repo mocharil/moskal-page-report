@@ -31,8 +31,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { index, query } = body;
 
-    console.log('Received query:', JSON.stringify({ index, query }, null, 2));
-    
     const esResponse = await client.search({
       index: index,
       body: {
@@ -40,7 +38,6 @@ export async function POST(request: Request) {
         sort: query.sort
       }
     });
-    console.log('ES Response:', JSON.stringify(esResponse.hits, null, 2));
 
     // Return the raw response data structure that matches ESSearchResponse type
     return NextResponse.json({
